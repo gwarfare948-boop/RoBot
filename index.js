@@ -1,55 +1,68 @@
 const { Client, GatewayIntentBits, SlashCommandBuilder } = require("discord.js");
 const mongoose = require("mongoose");
 
-// Create Discord client
+// Discord client
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
 });
 
-// Connect to MongoDB using environment variable
+// MongoDB connection
 mongoose.connect(process.env.MONGO)
   .then(() => console.log("MongoDB connected ✅"))
   .catch(err => console.error("MongoDB connection error ❌", err));
 
-// Define User schema
+// User schema
 const User = mongoose.model("users", new mongoose.Schema({
-  discord: String,
-  roblox: String,
-  username: String
+  discordId: { type: String, required: true },
+  robloxUsername: { type: String, required: true },
+  verificationCode: { type: String, required: true },
+  verified: { type: Boolean, default: false }
 }));
 
-// Ready event
+// When bot is ready
 client.once("ready", async () => {
   console.log(`Bot is ONLINE as ${client.user.tag}`);
 
-  // Register slash command
-  const verify = new SlashCommandBuilder()
+  // Slash command: /verify <username>
+  const verifyCommand = new SlashCommandBuilder()
     .setName("verify")
-    .setDescription("Verify Roblox account")
-    .addStringOption(o => o
-      .setName("username")
-      .setDescription("Your Roblox username")
-      .setRequired(true)
+    .setDescription("Verify your Roblox account")
+    .addStringOption(option =>
+      option.setName("username")
+        .setDescription("Your Roblox username")
+        .setRequired(true)
     );
 
-  await client.application.commands.set([verify]);
+  await client.application.commands.set([verifyCommand]);
 });
 
-// Interaction event
+// Handle interactions
 client.on("interactionCreate", async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   const username = interaction.options.getString("username");
-  const code = Math.random().toString(36).slice(2, 8); // generate verification code
+  
+  // Generate a 6-character code
+  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
 
+  // Store or update user in DB
   await User.findOneAndUpdate(
-    { discord: interaction.user.id },
-    { discord: interaction.user.id, username: username, roblox: code },
+    { discordId: interaction.user.id },
+    {
+      discordId: interaction.user.id,
+      robloxUsername: username,
+      verificationCode: code,
+      verified: false
+    },
     { upsert: true }
   );
 
-  await interaction.reply(`Put this in your Roblox bio:\n**${code}**\nThen run /verify again.`);
+  // Reply with ephemeral message (only user sees it)
+  await interaction.reply({
+    content: `✅ Your verification code is: **${code}**\n\nPut this code in your Roblox **bio** or somewhere in your profile.\nAfter that, run /verify again to complete verification.`,
+    ephemeral: true
+  });
 });
 
-// Login with Discord token from environment variable
+// Bot login
 client.login(process.env.TOKEN);
