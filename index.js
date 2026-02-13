@@ -1,11 +1,10 @@
 const {Client,GatewayIntentBits,SlashCommandBuilder} = require("discord.js");
 const axios = require("axios");
 const mongoose = require("mongoose");
-const config = require("./config.json");
 
 const client = new Client({intents:[GatewayIntentBits.Guilds,GatewayIntentBits.GuildMembers]});
 
-mongoose.connect(config.mongo);
+mongoose.connect(process.env.MONGO);
 
 const User = mongoose.model("users",new mongoose.Schema({
  discord:String,
@@ -39,4 +38,4 @@ client.on("interactionCreate", async i=>{
  await i.reply(`Put this in your Roblox bio:\n**${code}**\nThen run /verify again.`);
 });
 
-client.login(config.token);
+client.login(process.env.TOKEN);
