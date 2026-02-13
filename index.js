@@ -3,11 +3,8 @@ const mongoose = require("mongoose");
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGO, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
+
+mongoose.connect(process.env.MONGO);
 
 const User = mongoose.model("users", new mongoose.Schema({
   discord: String,
